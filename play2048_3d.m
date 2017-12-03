@@ -1,6 +1,14 @@
 function play2048_3d()
-    importImages();
+    initialize();
     startMenu();
+end
+
+function initialize()
+    clear;
+    global name;
+    name = '';
+    importImages();
+    importLeaderboard();
 end
 
 function startMenu()
@@ -14,8 +22,8 @@ end
 function startGame()
     reset();
     initializeGame();
-    %generateCubesGame();
-    generateCubesTesting();
+    generateCubesGame();
+    %generateCubesTesting();
     drawArrows();
     animateCameraGame();
     isLoading(false);
@@ -37,42 +45,64 @@ function reset()
     processing = true;
     global paused;
     paused = false;
+    global gameover;
+    gameover = false;
 end
 
 function menuToGame(~,~)
     quitMenu([],[]);
-    startGame();
+    promptName();
 end
 
 function gameToMenu(~,~)
+    saveScore();
     quitGame([],[]);
+    startMenu();
+end
+
+function menuToLeaderboard(~,~)
+    quitMenu([],[]);
+    reset();
+    initializeLeaderboard();
+end
+
+function leaderboardToMenu(~,~)
+    quitLeaderboard();
     startMenu();
 end
 
 function initializeGame()
     global figure_h;
+    global leaderboard;
     figure_h = figure('MenuBar', 'none', 'ToolBar', 'none', 'Name', ...
         '2048 in 3D by Baran Usluel', 'NumberTitle', 'off', ...
-        'units', 'normalized', 'outerposition', [0.2 0.1 0.6 0.8]);
+        'units', 'normalized', 'outerposition', [0.2 0.1 0.6 0.8], ...
+        'color', getColor('bg'), 'CloseRequestFcn', @figureClosing);
     pnl = uipanel('Position', [0, 0.8, 1, 0.2], 'BorderType', 'none', ...
         'BackgroundColor', getColor('pnl_bg'));
-    uicontrol(pnl, 'Style', 'text', 'Units', 'normalized', 'Position', [0.05 0.2 1 0.8], ...
+    uicontrol(pnl, 'Style', 'text', 'Units', 'normalized', 'Position', [0.02 0.25 1 0.6], ...
         'String', '2048', 'FontUnits', 'normalized', 'FontSize', 0.9, ...
         'FontWeight', 'bold', 'ForegroundColor', getColor('title'), ...
         'BackgroundColor', getColor('pnl_bg'), 'HorizontalAlignment', 'left');
     global score_h;
-    score_h = uicontrol(pnl, 'Style', 'text', 'Units', 'normalized', 'Position', [0.35 0.2 1 0.5], ...
-        'String', 'Score: 0', 'FontUnits', 'normalized', 'FontSize', 0.6, ...
+    score_h = uicontrol(pnl, 'Style', 'text', 'Units', 'normalized', 'Position', [0.27 0.3 1 0.4], ...
+        'String', sprintf('Score:\n0'), 'FontUnits', 'normalized', 'FontSize', 0.4, ...
+        'FontWeight', 'bold', 'ForegroundColor', getColor('title'), ...
+        'BackgroundColor', getColor('pnl_bg'), 'HorizontalAlignment', 'left');
+    global highscore;
+    highscore = leaderboard{1, 2};
+    uicontrol(pnl, 'Style', 'text', 'Units', 'normalized', 'Position', [0.4 0.3 1 0.4], ...
+        'String', sprintf('High Score:\n%d', highscore), 'FontUnits', 'normalized', 'FontSize', 0.4, ...
         'FontWeight', 'bold', 'ForegroundColor', getColor('title'), ...
         'BackgroundColor', getColor('pnl_bg'), 'HorizontalAlignment', 'left');
     uicontrol(pnl, 'Style', 'pushbutton', 'String', 'Quit',...
-        'Units', 'normalized', 'Position', [0.8 0.2 0.15 0.6],  ...
-        'Callback', @gameToMenu, 'BackgroundColor', getColor('pnl_bg'), ...
+        'Units', 'normalized', 'Position', [0.8 0.3 0.15 0.4],  ...
+        'Callback', @gameToMenu, 'BackgroundColor', getColor('pnl_bg')-10, ...
         'ForegroundColor', getColor('title'), 'FontUnits', 'normalized', 'FontSize', 0.4, ...
         'FontWeight', 'bold', 'HorizontalAlignment', 'right');
     uicontrol(pnl, 'Style', 'pushbutton', 'String', 'Pause',...
-        'Units', 'normalized', 'Position', [0.6 0.2 0.15 0.6],  ...
-        'Callback', @pauseGame, 'BackgroundColor', getColor('pnl_bg'), ...
+        'Units', 'normalized', 'Position', [0.6 0.3 0.15 0.4],  ...
+        'Callback', @pauseGame, 'BackgroundColor', getColor('pnl_bg')-10, ...
         'ForegroundColor', getColor('title'), 'FontUnits', 'normalized', 'FontSize', 0.4, ...
         'FontWeight', 'bold', 'HorizontalAlignment', 'right');
     global loading_h;
@@ -81,20 +111,19 @@ function initializeGame()
         'FontWeight', 'bold', 'ForegroundColor', getColor('title'), ...
         'BackgroundColor', getColor('bg'), 'HorizontalAlignment', 'left');
     global pause_h;
-    pause_h = uipanel('Position', [0.2, 0.1, 0.6, 0.6], 'BorderType', 'none', ...
-        'BackgroundColor', getColor('pnl_bg'), 'BorderType', 'beveledin', 'Visible', 'off');
+    pause_h = uipanel('Position', [0, 0.1, 1, 0.6], 'BorderType', 'none', ...
+        'BackgroundColor', getColor('pnl_bg'),  'Visible', 'off');
     uicontrol(pause_h, 'Style', 'pushbutton', 'String', 'Resume',...
         'Units', 'normalized', 'Position', [0.35 0.2 0.3 0.2],  ...
-        'Callback', @resumeGame, 'BackgroundColor', getColor('pnl_bg'), ...
-        'ForegroundColor', getColor('title'), 'FontUnits', 'normalized', 'FontSize', 0.4, ...
+        'Callback', @resumeGame, 'BackgroundColor', getColor('pnl_bg')-10, ...
+        'ForegroundColor', getColor('title'), 'FontUnits', 'normalized', 'FontSize', 0.3, ...
         'FontWeight', 'bold', 'HorizontalAlignment', 'center');
     uicontrol(pause_h, 'Style', 'text', 'Units', 'normalized', 'Position', [0 0.6 1 0.2], ...
-        'String', 'Game Paused', 'FontUnits', 'normalized', 'FontSize', 0.7, ...
+        'String', 'Game Paused', 'FontUnits', 'normalized', 'FontSize', 0.5, ...
         'FontWeight', 'bold', 'ForegroundColor', getColor('title'), ...
         'BackgroundColor', getColor('pnl_bg'), 'HorizontalAlignment', 'center');
     sp_h = subplot(2,1,2);
     sp_h.Position = [0 0.1 1 0.6];
-    set(figure_h, 'color', getColor('bg'));
     hold on;
     view(3);
     rot_h = rotate3d;
@@ -128,7 +157,8 @@ function initializeMenu()
     global menu_figure_h;
     menu_figure_h = figure('MenuBar', 'none', 'ToolBar', 'none', 'Name', ...
         '2048 in 3D by Baran Usluel', 'NumberTitle', 'off', ...
-        'units', 'normalized', 'outerposition', [0.2 0.1 0.6 0.8]);
+        'units', 'normalized', 'outerposition', [0.2 0.1 0.6 0.8], ...
+        'color', getColor('bg'));
     pnl_top = uipanel('Position', [0, 0.8, 1, 0.2], 'BorderType', 'none', ...
         'BackgroundColor', getColor('pnl_bg'));
     uicontrol(pnl_top, 'Style', 'text', 'Units', 'normalized', 'Position', [0 0.2 1 0.8], ...
@@ -138,13 +168,18 @@ function initializeMenu()
     pnl_bottom = uipanel('Position', [0, 0, 1, 0.2], 'BorderType', 'none', ...
         'BackgroundColor', getColor('pnl_bg'));
     uicontrol(pnl_bottom, 'Style', 'pushbutton', 'String', 'Quit',...
-        'Units', 'normalized', 'Position', [0.65 0.2 0.15 0.6],  ...
+        'Units', 'normalized', 'Position', [0.775 0.2 0.15 0.6],  ...
         'Callback', @quitMenu, 'BackgroundColor', getColor('pnl_bg')-10, ...
         'ForegroundColor', getColor('title'), 'FontUnits', 'normalized', 'FontSize', 0.4, ...
         'FontWeight', 'bold', 'HorizontalAlignment', 'right');
     uicontrol(pnl_bottom, 'Style', 'pushbutton', 'String', 'Play',...
-        'Units', 'normalized', 'Position', [0.2 0.2 0.3 0.6],  ...
+        'Units', 'normalized', 'Position', [0.075 0.2 0.3 0.6],  ...
         'Callback', @menuToGame, 'BackgroundColor', getColor(8), ...
+        'ForegroundColor', getColor('title'), 'FontUnits', 'normalized', 'FontSize', 0.4, ...
+        'FontWeight', 'bold', 'HorizontalAlignment', 'right');
+    uicontrol(pnl_bottom, 'Style', 'pushbutton', 'String', 'Leaderboard',...
+        'Units', 'normalized', 'Position', [0.425 0.2 0.3 0.6],  ...
+        'Callback', @menuToLeaderboard, 'BackgroundColor', getColor(2), ...
         'ForegroundColor', getColor('title'), 'FontUnits', 'normalized', 'FontSize', 0.4, ...
         'FontWeight', 'bold', 'HorizontalAlignment', 'right');
     global loading_h;
@@ -154,7 +189,6 @@ function initializeMenu()
         'BackgroundColor', getColor('bg'), 'HorizontalAlignment', 'left');
     sp_h = subplot(2,1,2);
     sp_h.Position = [0 0.2 1 0.6];
-    set(menu_figure_h, 'color', getColor('bg'));
     hold on;
     view(3);
     xlim([-1000, 1000]);
@@ -170,6 +204,75 @@ function initializeMenu()
     drawnow;
 end
 
+function initializeLeaderboard()
+    global leaderboard;
+    global leaderboard_figure_h;
+    leaderboard_figure_h = figure('MenuBar', 'none', 'ToolBar', 'none', 'Name', ...
+        '2048 in 3D by Baran Usluel', 'NumberTitle', 'off', ...
+        'units', 'normalized', 'outerposition', [0.2 0.1 0.6 0.8]);
+    pnl_top = uipanel('Position', [0, 0.8, 1, 0.2], 'BorderType', 'none', ...
+        'BackgroundColor', getColor('pnl_bg'));
+    uicontrol(pnl_top, 'Style', 'text', 'Units', 'normalized', 'Position', [0 0.1 1 0.8], ...
+        'String', 'Leaderboard', 'FontUnits', 'normalized', 'FontSize', 0.7, ...
+        'FontWeight', 'bold', 'ForegroundColor', getColor('title'), ...
+        'BackgroundColor', getColor('pnl_bg'), 'HorizontalAlignment', 'center');
+    pnl = uipanel('Position', [0, 0, 1, 0.8], 'BorderType', 'none', ...
+        'BackgroundColor', getColor('bg'));
+    for i = 1:10
+        uicontrol(pnl, 'Style', 'text', 'Units', 'normalized', 'Position', [0.05 1-0.1*i 1 0.1], ...
+        'String', [num2str(i) '. ' leaderboard{i, 1}], ...
+        'FontUnits', 'normalized', 'FontSize', 0.8, ...
+        'FontWeight', 'bold', 'ForegroundColor', getColor('title'), ...
+        'BackgroundColor', getColor('bg'), 'HorizontalAlignment', 'left');
+        uicontrol(pnl, 'Style', 'text', 'Units', 'normalized', 'Position', [0.55 1-0.1*i 0.5 0.1], ...
+        'String', num2str(leaderboard{i, 2}), ...
+        'FontUnits', 'normalized', 'FontSize', 0.8, ...
+        'FontWeight', 'bold', 'ForegroundColor', getColor('title'), ...
+        'BackgroundColor', getColor('bg'), 'HorizontalAlignment', 'left');
+    end
+    uicontrol(pnl_top, 'Style', 'pushbutton', 'String', 'Back',...
+        'Units', 'normalized', 'Position', [0.05 0.25 0.125 0.5],  ...
+        'Callback', @leaderboardToMenu, 'BackgroundColor', getColor('pnl_bg')-10, ...
+        'ForegroundColor', getColor('title'), 'FontUnits', 'normalized', 'FontSize', 0.4, ...
+        'FontWeight', 'bold', 'HorizontalAlignment', 'right');
+end
+
+function promptName()
+    global name;
+    figure('MenuBar', 'none', 'ToolBar', 'none', 'Name', ...
+        '2048 in 3D by Baran Usluel', 'NumberTitle', 'off', ...
+        'units', 'normalized', 'outerposition', [0.2 0.1 0.6 0.8],...
+        'color', getColor('pnl_bg'));
+    uicontrol('Style', 'text', 'Units', 'normalized', 'Position', [0 0.5 1 0.15], ...
+        'String', 'Choose Your Username:', 'FontUnits', 'normalized', 'FontSize', 0.4, ...
+        'FontWeight', 'bold', 'ForegroundColor', getColor('title'), ...
+        'BackgroundColor', getColor('pnl_bg'), 'HorizontalAlignment', 'center');
+    uicontrol('Style', 'edit', 'Units', 'normalized', 'Position', [0.2 0.4 0.6 0.1], ...
+        'String', name, 'FontUnits', 'normalized', 'FontSize', 0.5, ...
+        'FontWeight', 'bold', 'ForegroundColor', getColor('title')-30, ...
+        'BackgroundColor', getColor('pnl_bg')+10, 'HorizontalAlignment', 'center', ...
+        'KeyPressFcn', @saveName);
+    uicontrol('Style', 'pushbutton', 'String', 'Play Now!',...
+        'Units', 'normalized', 'Position', [0.4 0.2 0.2 0.1],  ...
+        'Callback', @saveName, 'BackgroundColor', getColor(2), ...
+        'ForegroundColor', getColor('title'), 'FontUnits', 'normalized', 'FontSize', 0.4, ...
+        'FontWeight', 'bold', 'HorizontalAlignment', 'center');
+end
+
+function saveName(obj, evt)
+    global name;
+    if strcmp(evt.EventName, 'Action')
+        name = obj.Parent.Children(2).String;
+    elseif strcmp(evt.EventName, 'KeyPress') && strcmp(evt.Key, 'return')
+        pause(0.01);
+        name = obj.String;
+    else
+        return;
+    end
+    close(obj.Parent);
+    startGame();
+end
+
 function importImages()
     global label_ims;
     label_ims = cell(1, 11);
@@ -177,6 +280,37 @@ function importImages()
         [im, ~, alpha] = imread(['images/' num2str(2^n) '.png']);
         label_ims{n} = {fliplr(im), fliplr(alpha)};
     end
+end
+
+function importLeaderboard()
+    global leaderboard;
+    leaderboard = cell(10,2);
+    fh = fopen('leaderboard.dat', 'r');
+    if fh == -1
+        return;
+    else
+        line = fgetl(fh);
+        n = 1;
+        while ischar(line)
+            name = '';
+            [tmp, line] = strtok(line, ' ');
+            while ~isempty(line)
+                name = [name ' ' tmp];
+                [tmp, line] = strtok(line, ' ');
+            end
+            score = tmp;
+            leaderboard{n, 1} = name;
+            leaderboard{n, 2} = str2num(score);
+            line = fgetl(fh);
+            n = n + 1;
+        end
+    end
+    [~, order] = sort([leaderboard{:, 2}], 'descend');
+    leaderboard(1:length(order),:) = leaderboard(order, :);
+    if length(order) > 10
+        leaderboard = leaderboard(1:10,:);
+    end
+    fclose(fh);
 end
 
 function animateCameraGame()
@@ -214,23 +348,43 @@ function isLoading(isIt)
 end
 
 function gameOverWin()
+    global gameover;
     global loading_h;
+    gameover = true;
     set(loading_h, 'visible', 'on');
     set(loading_h, 'String', 'You Won!');
     set(loading_h, 'Position', [0.05 0.05 0.4 0.1]);
     drawnow;
+    saveScore();
     %pause(5);
     %quitGame([],[]);
 end
 
 function gameOverLose()
+    global gameover;
     global loading_h;
+    gameover = true;
     set(loading_h, 'visible', 'on');
     set(loading_h, 'String', 'You Lost!');
     set(loading_h, 'Position', [0.05 0.05 0.4 0.1]);
     drawnow;
+    saveScore();
     %pause(5);
     %quitGame([],[]);
+end
+
+function saveScore()
+    global name;
+    global score;
+    global leaderboard;
+    sameNames = strcmp(leaderboard(:,1), [' ' name]);
+    if any(sameNames) && any([leaderboard{sameNames,2}] == score)
+        return;
+    end
+    fh = fopen('leaderboard.dat', 'a');
+    fprintf(fh, '%s %d\n', name, score);
+    fclose(fh);
+    importLeaderboard();
 end
 
 function quitGame(~,~)
@@ -241,6 +395,11 @@ end
 function quitMenu(~,~)
     global menu_figure_h;
     close(menu_figure_h);
+end
+
+function quitLeaderboard()
+    global leaderboard_figure_h;
+    close(leaderboard_figure_h);
 end
 
 function pauseGame(~,~)
@@ -257,6 +416,11 @@ function resumeGame(~,~)
     hidem(pause_h);
 end
 
+function figureClosing(~,~)
+    saveScore();
+    delete(gcf);
+end
+
 function togglePause()
     global paused
     if paused
@@ -270,7 +434,8 @@ function keyPressed(~, evt)
     global cube_value;
     global score;
     global processing;
-    if processing
+    global gameover;
+    if processing || gameover
         return;
     end
     new_value = cube_value;
@@ -315,20 +480,20 @@ function keyPressed(~, evt)
         [layer, score] = boardSlider(new_value(:,:,z), dir, score);
         new_value(:,:,z) = layer;
     end
+    if permuted
+        new_value = permute(new_value, [3 2 1]);
+    end
     if any(any(any(new_value ~= cube_value)))
         potential = find(any(any(new_value == 0)));
         for z = potential(round(length(potential)*rand(1,1)+0.5))
             new_value(:,:,z) = tileGenerator(new_value(:,:,z));
         end
-        if permuted
-            new_value = permute(new_value, [3 2 1]);
-        end
         updateCubes(new_value);
-        updateScore();
     end
     highlightArrow(dir_n, 'arrow');
     drawnow;
     isLoading(false);
+    updateScore();
     if any(any(any(new_value == 2048)))
         gameOverWin();
     elseif ~any(any(any(new_value == 0)))
@@ -353,8 +518,12 @@ end
 
 function updateScore()
     global score;
+    global highscore;
     global score_h;
-    set(score_h, 'String', ['Score: ', num2str(score)]);
+    set(score_h, 'String', sprintf('Score:\n%d', score));
+    if score > highscore
+        set(score_h, 'ForegroundColor', uint8(double(getColor(32))+[50 -50 -50]));
+    end
 end
 
 function generateCubesGame()
@@ -375,6 +544,7 @@ function generateCubesTesting()
     for x = 1:4
         for y = 1:4
             for z = 1:4
+                %{
                 if mod(x+y+z, 2) == 0
                     drawCube(x,y,z,2);
                 %elseif x == 1 && y == 1 && z == 1
@@ -382,6 +552,8 @@ function generateCubesTesting()
                 else
                     drawCube(x,y,z,4);
                 end
+                %}
+                drawCube(x,y,z,1024);
             end
         end
     end
@@ -548,30 +720,6 @@ function drawLabels(x_i, y_i, z_i, val)
         cube_h{x_i, y_i, z_i} = [cube_h{x_i, y_i, z_i} {im_h}];
     end
 end
-
-%{
-function hideLabels()
-    global labels_h;
-    for label_h = labels_h
-        hidem(label_h);
-    end
-end
-
-function showLabels()
-    global labels_h;
-    for label_h = labels_h
-        showm(label_h);
-    end
-end
-
-function preRotateEvent(obj, evt)
-    hideLabels();
-end
-
-function postRotateEvent(obj, evt)
-    showLabels();
-end
-%}
 
 function clr = getColor(id)
     switch id
