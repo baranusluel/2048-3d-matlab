@@ -3,7 +3,7 @@ This is a 3D version of the 2048 game, implemented in MATLAB. It was created as 
 
 ## Screenshots
 
-![Main Menu Screenshot](/screenshots/menu.PNG?raw=true)
+![Main Menu Screenshot](/resources/screenshots/menu.PNG?raw=true)
 
 
-![In Game Screenshot](/screenshots/in_game.PNG?raw=true)
+![In Game Screenshot](/resources/screenshots/in_game.PNG?raw=true)
