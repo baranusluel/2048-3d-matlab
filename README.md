@@ -4,6 +4,8 @@
 
 This is a 3D version of the 2048 game, implemented in MATLAB. It was created as a project for CS1371.
 
+You can find the cross-platform version created with Unity and C# here: https://github.com/baranusluel/2048-3d
+
 ## Screenshots
 
 Main Menu:
